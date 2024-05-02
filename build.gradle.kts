@@ -28,7 +28,16 @@ val DEV_ONLY_MODULES: List<String> = listOf(
     "fabric-gametest-api-v1"
 )
 
-ext["getSubprojectVersion"] = object : groovy.lang.Closure<Unit>(this) { fun doCall(project: Project) { getSubprojectVersion(project) } }
+ext["getSubprojectVersion"] = object : groovy.lang.Closure<Unit>(this) {
+    fun doCall(project: Project) {
+        getSubprojectVersion(project)
+    }
+}
+ext["moduleDependencies"] = object : groovy.lang.Closure<Unit>(this) {
+    fun doCall(project: Project, depNames: List<String>) {
+        moduleDependencies(project, depNames)
+    }
+}
 
 val upstreamProperties = Properties().also { p ->
     file("$upstreamProjectPath/gradle.properties").takeIf(File::exists)?.bufferedReader()?.use { p.load(it) }
@@ -42,13 +51,15 @@ group = "dev.su5ed.sinytra"
 version = "$upstreamVersion+$implementationVersion+$versionMc"
 println("Version: $version")
 
-java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
-    withSourcesJar()
-}
-
 allprojects {
+    apply(plugin = "java-library")
+    apply(plugin = "maven-publish")
     apply(plugin = "dev.architectury.loom")
+
+    java {
+        toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+        withSourcesJar()
+    }
 
     repositories {
         mavenCentral()
@@ -89,17 +100,26 @@ dependencies {
 }
 
 tasks {
+    register("generate") {
+        group = "fabric"
+    }
+
     withType<JavaCompile> {
         options.release = 21
     }
 }
 
 // Subprojects
+
+val includedRemappedJars: Configuration by configurations.creating
+val includedTestModRemappedJars: Configuration by configurations.creating
+
 subprojects {
     // Setup must come before generators
     apply(plugin = "ffapi.neo-setup")
     apply(plugin = "ffapi.neo-conversion")
     apply(plugin = "ffapi.neo-entrypoint")
+    apply(plugin = "ffapi.package-info")
 
     if (!META_PROJECTS.contains(name)) {
         apply(plugin = "ffapi.neo-compat")
@@ -108,12 +128,7 @@ subprojects {
     repositories {
         maven("https://maven.su5ed.dev/releases")
     }
-}
 
-val includedRemappedJars: Configuration by configurations.creating
-val includedTestModRemappedJars: Configuration by configurations.creating
-
-subprojects {
     if (name !in DEV_ONLY_MODULES && !META_PROJECTS.contains(name)) {
         // Include the signed or none signed jar from the sub project.
         dependencies {
@@ -130,13 +145,23 @@ subprojects {
     if (!META_PROJECTS.contains(project.name)) {
         loom.mods.register(project.name) {
             sourceSet(sourceSets.main.get())
-//			sourceSet p.sourceSets.client
         }
 
         if (project.file("src/testmod").exists() || project.file("src/testmodClient").exists()) {
             loom.mods.register(project.name + "-testmod") {
                 sourceSet(sourceSets.getByName("testmod"))
-//			    sourceSet p.sourceSets.testmodClient
+            }
+        }
+    }
+
+    publishing {
+        publications {
+            register<MavenPublication>("mavenJava") {
+                pom {
+//                    addPomMetadataInformation(project, pom) TODO
+                }
+                tasks.named("remapJar").let { artifact(it) { builtBy(it) } }
+                tasks.named("remapSourcesJar").let { artifact(it) { builtBy(it) } }
             }
         }
     }
@@ -161,7 +186,7 @@ tasks {
 afterEvaluate {
     publishing {
         publications {
-            create<MavenPublication>("mavenJava") {
+            register<MavenPublication>("mavenJava") {
                 from(components["java"])
 
                 pom.withXml {
@@ -180,19 +205,47 @@ afterEvaluate {
 }
 
 fun getSubprojectVersion(project: Project): String {
-	// Get the version from the gradle.properties file
-	val version = upstreamProperties["${project.name}-version"] as? String
+    // Get the version from the gradle.properties file
+    val version = upstreamProperties["${project.name}-version"] as? String
         ?: throw NullPointerException("Could not find version for " + project.name)
 
     @Suppress("SENSELESS_COMPARISON")
     if (grgit == null) {
-		return "$version+nogit"
-	}
+        return "$version+nogit"
+    }
 
     val latestCommits = grgit.log(mapOf("paths" to listOf(project.name), "maxCommits" to 1))
-	if (latestCommits.isEmpty()) {
-		return "$version+uncommited"
-	}
+    if (latestCommits.isEmpty()) {
+        return "$version+uncommited"
+    }
 
-	return version + "+" + latestCommits.get(0).id.substring(0, 8) + DigestUtils.sha256Hex(versionMc).substring(0, 2)
+    return version + "+" + latestCommits[0].id.substring(0, 8) + DigestUtils.sha256Hex(versionMc).substring(0, 2)
+}
+
+fun moduleDependencies(project: Project, depNames: List<String>) {
+    val deps = depNames.map { project.dependencies.project(":$it", "namedElements") }
+
+    project.dependencies {
+        deps.forEach {
+            compileOnly(it)
+        }
+    }
+
+    // As we manually handle the maven artifacts, we need to also manually specify the deps.
+    project.publishing {
+        publications {
+            named<MavenPublication>("mavenJava") {
+                pom.withXml {
+                    val depsNode = asNode().appendNode("dependencies")
+                    deps.forEach {
+                        val depNode = depsNode.appendNode("dependency")
+                        depNode.appendNode("groupId", it.group)
+                        depNode.appendNode("artifactId", it.name)
+                        depNode.appendNode("version", it.version)
+                        depNode.appendNode("scope", "compile")
+                    }
+                }
+            }
+        }
+    }
 }

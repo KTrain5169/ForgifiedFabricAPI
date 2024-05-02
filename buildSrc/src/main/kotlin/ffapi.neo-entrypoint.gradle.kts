@@ -1,4 +1,3 @@
-import net.fabricmc.loader.api.entrypoint.EntrypointContainer
 import net.fabricmc.loader.impl.metadata.DependencyOverrides
 import net.fabricmc.loader.impl.metadata.EntrypointMetadata
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata
@@ -26,6 +25,7 @@ masterSourceSets.forEach { sourceSet ->
     val task = tasks.register(taskName, GenerateForgeModEntrypoint::class.java) {
         group = "fabric"
         description = "Generates entrypoint files for ${sourceSet.name} fabric mod."
+        project.tasks.findByName(sourceSet.getTaskName("generate", "ImplPackageInfos"))?.let { mustRunAfter(it) }
 
         // Only apply to default source directory since we also add the generated
         // sources to the source set.
@@ -35,6 +35,9 @@ masterSourceSets.forEach { sourceSet ->
         packageName.set(generatedPackageName)
     }
     sourceSet.java.srcDir(task)
+    rootProject.tasks.named("generate") {
+        dependsOn(task)
+    }
 }
 
 abstract class GenerateForgeModEntrypoint : DefaultTask() {
@@ -61,31 +64,39 @@ abstract class GenerateForgeModEntrypoint : DefaultTask() {
 
         val modMetadata = parseModMetadata(fabricModJson.asFile.get())
         val modid = normalizeModid(modMetadata.id)
-        val commonEntrypoints = modMetadata.getEntrypoints("main").map(EntrypointMetadata::getValue).filter(::entryPointExists).map { "new $it().onInitialize();" }
-        val clientEntrypoints = modMetadata.getEntrypoints("client").map(EntrypointMetadata::getValue).filter(::entryPointExists).map { "new $it().onInitializeClient();" }
-        val serverEntrypoints = modMetadata.getEntrypoints("server").map(EntrypointMetadata::getValue).filter(::entryPointExists).map { "new $it().onInitializeServer();" }
+        val commonEntrypoints =
+            modMetadata.getEntrypoints("main").map(EntrypointMetadata::getValue).filter(::entryPointExists)
+                .map { "new $it().onInitialize();" }
+        val clientEntrypoints =
+            modMetadata.getEntrypoints("client").map(EntrypointMetadata::getValue).filter(::entryPointExists)
+                .map { "new $it().onInitializeClient();" }
+        val serverEntrypoints =
+            modMetadata.getEntrypoints("server").map(EntrypointMetadata::getValue).filter(::entryPointExists)
+                .map { "new $it().onInitializeServer();" }
+        val separator = "\n                    "
+        val nestedSeparator = "\n                        "
 
         val commonEntrypointInit = if (commonEntrypoints.isNotEmpty()) {
             """// Initialize main entrypoints
-                    ${commonEntrypoints.joinToString(separator = "\n")}"""
+                    ${commonEntrypoints.joinToString(separator)}"""
         } else ""
         val clientEntrypointInit = if (clientEntrypoints.isNotEmpty()) {
             """
                     // Initialize client entrypoints
                     if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
-                        ${clientEntrypoints.joinToString(separator = "\n")}
+                        ${clientEntrypoints.joinToString(nestedSeparator)}
                     }"""
         } else ""
         val serverEntrypointInit = if (serverEntrypoints.isNotEmpty()) {
             """
                     // Initialize server entrypoints
                     if (net.neoforged.fml.loading.FMLEnvironment.dist.isDedicatedServer()) {
-                        ${serverEntrypoints.joinToString(separator = "\n")}
+                        ${serverEntrypoints.joinToString(nestedSeparator)}
                     }"""
         } else ""
         val entrypointInitializers = listOf(commonEntrypointInit, clientEntrypointInit, serverEntrypointInit)
             .filter(String::isNotEmpty)
-            .joinToString(separator = "\n                    ")
+            .joinToString(separator = separator)
 
         val template = """
             package ${packageName.get()};

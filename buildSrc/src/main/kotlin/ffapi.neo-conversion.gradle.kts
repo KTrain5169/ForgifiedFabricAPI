@@ -45,6 +45,9 @@ extensions.getByType<SourceSetContainer>().configureEach {
     tasks.named("clean") {
         dependsOn(cleanTask)
     }
+    rootProject.tasks.named("generate") {
+        dependsOn(task)
+    }
 }
 
 abstract class GenerateForgeModMetadata : DefaultTask() {
@@ -149,12 +152,12 @@ abstract class GenerateForgeModMetadata : DefaultTask() {
             val nextMajor = (minecraftVersionString.get().split('.')[1].toInt()) + 1
             val excludedDeps = listOf("fabricloader", "java", "minecraft")
             val modDependencies =
-                json.getAsJsonObject("depends").entrySet().filter { !excludedDeps.contains(it.key) }.map {
+                (json.getAsJsonObject("depends")?.entrySet() ?: emptySet()).filter { !excludedDeps.contains(it.key) }.map {
                     val normalDepModid = normalizeModid(it.key as String)
                     return@map ModDependency(
                         normalDepModid,
                         "required",
-                        "[0, )",
+                        "*",
                         "NONE",
                         "BOTH"
                     )

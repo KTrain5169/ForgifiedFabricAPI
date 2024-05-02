@@ -19,13 +19,15 @@ val localDevJar = tasks.register("localDevJar", Jar::class.java) {
     rename("accesstransformer_dev.cfg", "accesstransformer.cfg")
     archiveClassifier = "local"
     destinationDirectory = project.layout.buildDirectory.dir("devlibs")
-    manifest.from(jar.map { it.manifest })
+    manifest.from(jar.get().manifest)
 }
 
 afterEvaluate {
     configurations.named("namedElements") {
         outgoing.artifacts.clear()
-        outgoing.artifact(localDevJar)
+        outgoing.artifact(localDevJar) {
+            builtBy(localDevJar)
+        }
     }
 }
 
@@ -54,6 +56,16 @@ tasks.withType<AbstractRemapJarTask>().configureEach {
 //artifacts.add("remappedJars", remapJar)
 
 val mainSourceSet = sourceSets.getByName("main")
+
+mainSourceSet.apply {
+    java {
+        srcDir("src/client/java")
+    }
+    resources {
+        srcDir("src/client/resources")
+    }
+}
+
 val testmod: SourceSet by sourceSets.creating {
     compileClasspath += mainSourceSet.compileClasspath
     runtimeClasspath += mainSourceSet.runtimeClasspath
