@@ -47,7 +47,7 @@ val upstreamVersion = upstreamProperties["version"] ?: "0.0.0"
 val javadocDeps: Configuration by configurations.creating
 val yarnMappings: Configuration by configurations.creating
 
-group = "dev.su5ed.sinytra"
+group = "org.sinytra"
 version = "$upstreamVersion+$implementationVersion+$versionMc"
 println("Version: $version")
 
@@ -96,7 +96,7 @@ dependencies {
     javadocDeps("net.fabricmc:fabric-loader:$versionFabricLoader")
 
     // Include Forgified Fabric Loader
-    include("dev.su5ed.sinytra:fabric-loader:$versionForgifiedFabricLoader:full")
+    include("org.sinytra:fabric-loader:$versionForgifiedFabricLoader:full")
 }
 
 tasks {
@@ -227,7 +227,7 @@ fun moduleDependencies(project: Project, depNames: List<String>) {
 
     project.dependencies {
         deps.forEach {
-            compileOnly(it)
+            api(it)
         }
     }
 

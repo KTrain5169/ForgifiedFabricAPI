@@ -79,10 +79,13 @@ val testmod: SourceSet by sourceSets.creating {
 }
 
 dependencies {
-    "compileOnly"("dev.su5ed.sinytra:fabric-loader:$versionForgifiedFabricLoader")
+    "compileOnly"("org.sinytra:fabric-loader:$versionForgifiedFabricLoader")
 
     "testmodImplementation"(mainSourceSet.output)
-    "testmodImplementation"("dev.su5ed.sinytra:fabric-loader:$versionForgifiedFabricLoader")
+    "testmodCompileOnly"("org.sinytra:fabric-loader:$versionForgifiedFabricLoader")
+    "testmodRuntimeOnly"("org.sinytra:fabric-loader:$versionForgifiedFabricLoader:full") {
+        isTransitive = false
+    }
 }
 
 loom.apply {
