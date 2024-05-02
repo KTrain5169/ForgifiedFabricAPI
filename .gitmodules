@@ -1,0 +1,3 @@
+[submodule "fabric-api-upstream"]
+	path = fabric-api-upstream
+	url = https://github.com/FabricMC/fabric

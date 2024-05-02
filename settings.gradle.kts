@@ -20,5 +20,6 @@ pluginManagement {
     }
 }
 
-rootProject.name = "fabric-loader"
+rootProject.name = "forgified-fabric-api"
 
+include("fabric-api-base")
