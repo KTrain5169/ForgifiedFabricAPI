@@ -220,7 +220,7 @@ abstract class GenerateForgeModMetadata : DefaultTask() {
                 dependencies = mapOf(normalModid to allDependencies),
                 mixins
             )
-            val modsTomlFile = output.resolve("META-INF/mods.toml")
+            val modsTomlFile = output.resolve("META-INF/neoforge.mods.toml")
             modsTomlFile.deleteIfExists()
             modsTomlFile.parent.createDirectories()
             TomlWriter().write(modsToml, modsTomlFile.toFile())

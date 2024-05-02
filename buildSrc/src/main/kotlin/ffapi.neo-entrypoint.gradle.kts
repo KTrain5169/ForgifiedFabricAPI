@@ -11,7 +11,6 @@ val versionMc: String by rootProject
 val versionForge: String by rootProject
 
 // TODO use org/sinytra everywhere + migrate loader
-val generatedPackageName = "org.sinytra.fabric.generated"
 
 val loom = extensions.getByType<LoomGradleExtensionAPI>()
 val sourceSets = extensions.getByType<SourceSetContainer>()
@@ -32,7 +31,6 @@ masterSourceSets.forEach { sourceSet ->
         sourceRoots.from(sourceSet.java.srcDirs)
         outputDir.set(targetDir)
         fabricModJson.set(file("src/${sourceSet.name}/resources/fabric.mod.json"))
-        packageName.set(generatedPackageName)
     }
     sourceSet.java.srcDir(task)
     rootProject.tasks.named("generate") {
@@ -48,22 +46,25 @@ abstract class GenerateForgeModEntrypoint : DefaultTask() {
     @get:InputFile
     val fabricModJson: RegularFileProperty = project.objects.fileProperty()
 
-    @get:Input
-    val packageName: Property<String> = project.objects.property(String::class)
-
     @get:OutputDirectory
     val outputDir: DirectoryProperty = project.objects.directoryProperty()
 
+    private val basePackageName = "org.sinytra.fabric.generated."
+    private val projectNamePattern = "^fabric_(.+?)(?:_v\\d)?\$".toRegex()
+
     @TaskAction
     fun run() {
+        val modMetadata = parseModMetadata(fabricModJson.asFile.get())
+        val modid = normalizeModid(modMetadata.id)
+
         val className = "GeneratedEntryPoint"
-        val packagePath = packageName.get().replace('/', '.')
+        val packageName = basePackageName + (projectNamePattern.find(modid)?.groups?.get(1)?.value
+            ?: throw RuntimeException("Unable to determine generated package name for mod $modid"))
+        val packagePath = packageName.replace('/', '.')
         val packageDir = outputDir.file(packagePath).get().asFile.toPath()
         packageDir.createDirectories()
         val destFile = packageDir.resolve("$className.java")
 
-        val modMetadata = parseModMetadata(fabricModJson.asFile.get())
-        val modid = normalizeModid(modMetadata.id)
         val commonEntrypoints =
             modMetadata.getEntrypoints("main").map(EntrypointMetadata::getValue).filter(::entryPointExists)
                 .map { "new $it().onInitialize();" }
@@ -99,7 +100,7 @@ abstract class GenerateForgeModEntrypoint : DefaultTask() {
             .joinToString(separator = separator)
 
         val template = """
-            package ${packageName.get()};
+            package $packageName;
             
             @net.neoforged.fml.common.Mod($className.MOD_ID)
             public class $className {

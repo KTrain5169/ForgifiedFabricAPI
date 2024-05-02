@@ -98,16 +98,14 @@ loom.apply {
             property("mixin.debug", "true")
         }
 
-        sourceSets.findByName("testmod")?.let { testMod ->
-            create("gametest") {
-                server()
-                isIdeConfigGenerated = project.rootProject == project
-                name = "Testmod Game Test Server"
-                source(testMod)
+        create("gametest") {
+            server()
+            isIdeConfigGenerated = project.rootProject == project
+            name = "Testmod Game Test Server"
+            source(testmod)
 
-                // Enable the gametest runner
-                property("forge.gameTestServer", "true")
-            }
+            // Enable the gametest runner
+            property("forge.gameTestServer", "true")
         }
 
         create("testmodClient") {

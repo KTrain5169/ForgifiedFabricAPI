@@ -56,7 +56,6 @@ open class GenerateImplPackageInfos : DefaultTask() {
     @TaskAction
     fun execute() {
         val output: Path = outputDir.get().asFile.toPath()
-        project.delete(output)
         val headerText = header.get().asFile.readLines().joinToString("\n") // normalize line endings
         sourceRoots.files
             .filter(File::isDirectory)
