@@ -6,6 +6,7 @@ import kotlin.io.path.deleteIfExists
 
 val versionMc: String by rootProject
 val versionForge: String by rootProject
+val versionForgifiedFabricLoader: String by rootProject
 
 val loom = extensions.getByType<LoomGradleExtensionAPI>()
 val sourceSets = extensions.getByType<SourceSetContainer>()
@@ -52,21 +53,64 @@ tasks.withType<AbstractRemapJarTask>().configureEach {
 
 //artifacts.add("remappedJars", remapJar)
 
-loom.mixin {
-    useLegacyMixinAp = true
-    defaultRefmapName = project.extensions.getByType<BasePluginExtension>().archivesName.map { "$it-refmap.json" }
+val mainSourceSet = sourceSets.getByName("main")
+val testmod: SourceSet by sourceSets.creating {
+    compileClasspath += mainSourceSet.compileClasspath
+    runtimeClasspath += mainSourceSet.runtimeClasspath
+
+    java {
+        srcDir("src/testmodClient/java")
+    }
+    resources {
+        srcDir("src/testmodClient/resources")
+    }
 }
 
-loom.runs {
-    sourceSets.findByName("testmod")?.let { testMod ->
-        create("gametest") {
+dependencies {
+    "compileOnly"("dev.su5ed.sinytra:fabric-loader:$versionForgifiedFabricLoader")
+
+    "testmodImplementation"(mainSourceSet.output)
+    "testmodImplementation"("dev.su5ed.sinytra:fabric-loader:$versionForgifiedFabricLoader")
+}
+
+loom.apply {
+    mixin {
+        useLegacyMixinAp = true
+        defaultRefmapName = project.extensions.getByType<BasePluginExtension>().archivesName.map { "$it-refmap.json" }
+    }
+
+    runtimeOnlyLog4j = true
+
+    runs {
+        configureEach {
+            property("mixin.debug", "true")
+        }
+
+        sourceSets.findByName("testmod")?.let { testMod ->
+            create("gametest") {
+                server()
+                isIdeConfigGenerated = project.rootProject == project
+                name = "Testmod Game Test Server"
+                source(testMod)
+
+                // Enable the gametest runner
+                property("forge.gameTestServer", "true")
+            }
+        }
+
+        create("testmodClient") {
+            client()
+            isIdeConfigGenerated = project.rootProject == project
+            name = "Testmod Client"
+            source(testmod)
+        }
+
+        create("testmodServer") {
             server()
             isIdeConfigGenerated = project.rootProject == project
-            name = "Testmod Game Test Server"
-            source(testMod)
-
-            // Enable the gametest runner
-            property("forge.gameTestServer", "true")
+            name = "Testmod Server"
+            source(testmod)
         }
     }
 }
+

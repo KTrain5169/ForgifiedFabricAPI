@@ -31,7 +31,11 @@ repositories {
 dependencies {
     implementation("dev.architectury:architectury-loom:1.6.9999")
 
+    implementation("net.fabricmc:fabric-loader:0.15.10")
+
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("com.moandjiezana.toml:toml4j:0.7.2")
     implementation("dev.architectury:at:1.0.1")
+
+    implementation("commons-codec:commons-codec:1.17.0")
 }

@@ -1,16 +1,20 @@
 import net.fabricmc.loom.build.nesting.IncludedJarFactory
 import net.fabricmc.loom.build.nesting.IncludedJarFactory.LazyNestedFile
 import net.fabricmc.loom.util.GroovyXmlUtil
+import org.apache.commons.codec.digest.DigestUtils
+import java.util.*
 
 plugins {
     java
     `maven-publish`
-    id("net.neoforged.gradleutils").version("3.0.0-alpha.10")
+    id("org.ajoberstar.grgit") version "4.1.1"
     id("dev.architectury.loom") // Version declared in buildSrc
 }
 
-val versionMc: String by rootProject
-val versionForge: String by rootProject
+val upstreamProjectPath = "fabric-api-upstream"
+val implementationVersion: String by project
+val versionMc: String by project
+val versionForge: String by project
 val versionYarn: String by project
 val versionForgifiedFabricLoader: String by project
 val versionFabricLoader: String by project
@@ -24,21 +28,19 @@ val DEV_ONLY_MODULES: List<String> = listOf(
     "fabric-gametest-api-v1"
 )
 
+ext["getSubprojectVersion"] = object : groovy.lang.Closure<Unit>(this) { fun doCall(project: Project) { getSubprojectVersion(project) } }
+
+val upstreamProperties = Properties().also { p ->
+    file("$upstreamProjectPath/gradle.properties").takeIf(File::exists)?.bufferedReader()?.use { p.load(it) }
+}
+val upstreamVersion = upstreamProperties["version"] ?: "0.0.0"
+
 val javadocDeps: Configuration by configurations.creating
+val yarnMappings: Configuration by configurations.creating
 
 group = "dev.su5ed.sinytra"
-version = "0.0.0-SNAPSHOT"
-
-//gradleutils.version {
-//    branches {
-//        suffixBranch()
-//        suffixExemptedBranch(versionMc)
-//    }
-//}
-//version = "${gradleutils.version}+$versionLoaderUpstream+$versionMc"
-//println("Version: $version")
-
-val yarnMappings: Configuration by configurations.creating
+version = "$upstreamVersion+$implementationVersion+$versionMc"
+println("Version: $version")
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))
@@ -50,6 +52,7 @@ allprojects {
 
     repositories {
         mavenCentral()
+        mavenLocal()
         maven {
             name = "FabricMC"
             url = uri("https://maven.fabricmc.net")
@@ -91,29 +94,12 @@ tasks {
     }
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-        }
-    }
-
-    repositories {
-        maven {
-            name = "Su5eD"
-            url = uri("https://maven.su5ed.dev/releases")
-            credentials {
-                username = System.getenv("MAVEN_USER") ?: "not"
-                password = System.getenv("MAVEN_PASSWORD") ?: "set"
-            }
-        }
-    }
-}
-
 // Subprojects
 subprojects {
-    apply(plugin = "ffapi.neo-conversion")
+    // Setup must come before generators
     apply(plugin = "ffapi.neo-setup")
+    apply(plugin = "ffapi.neo-conversion")
+    apply(plugin = "ffapi.neo-entrypoint")
 
     if (!META_PROJECTS.contains(name)) {
         apply(plugin = "ffapi.neo-compat")
@@ -140,6 +126,20 @@ subprojects {
 //            includedTestModRemappedJars(project(path, "testModRemappedJars")) TODO
         }
     }
+
+    if (!META_PROJECTS.contains(project.name)) {
+        loom.mods.register(project.name) {
+            sourceSet(sourceSets.main.get())
+//			sourceSet p.sourceSets.client
+        }
+
+        if (project.file("src/testmod").exists() || project.file("src/testmodClient").exists()) {
+            loom.mods.register(project.name + "-testmod") {
+                sourceSet(sourceSets.getByName("testmod"))
+//			    sourceSet p.sourceSets.testmodClient
+            }
+        }
+    }
 }
 
 val includedJarFactory = IncludedJarFactory(project)
@@ -161,7 +161,9 @@ tasks {
 afterEvaluate {
     publishing {
         publications {
-            named<MavenPublication>("mavenJava") {
+            create<MavenPublication>("mavenJava") {
+                from(components["java"])
+
                 pom.withXml {
                     val depsNode = GroovyXmlUtil.getOrCreateNode(asNode(), "dependencies")
                     rootProject.configurations.include.get().dependencies.forEach {
@@ -175,4 +177,22 @@ afterEvaluate {
             }
         }
     }
+}
+
+fun getSubprojectVersion(project: Project): String {
+	// Get the version from the gradle.properties file
+	val version = upstreamProperties["${project.name}-version"] as? String
+        ?: throw NullPointerException("Could not find version for " + project.name)
+
+    @Suppress("SENSELESS_COMPARISON")
+    if (grgit == null) {
+		return "$version+nogit"
+	}
+
+    val latestCommits = grgit.log(mapOf("paths" to listOf(project.name), "maxCommits" to 1))
+	if (latestCommits.isEmpty()) {
+		return "$version+uncommited"
+	}
+
+	return version + "+" + latestCommits.get(0).id.substring(0, 8) + DigestUtils.sha256Hex(versionMc).substring(0, 2)
 }

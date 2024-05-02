@@ -19,9 +19,10 @@ val loom = extensions.getByType<LoomGradleExtensionAPI>()
 extensions.getByType<SourceSetContainer>().configureEach {
     // We have to capture the source set name for the lazy string literals,
     // otherwise it'll just be whatever the last source set is in the list.
+    val baseTaskName = "ForgeModMetadata"
     val sourceSetName = name
     val resourceRoots = resources.srcDirs
-    val taskName = getTaskName("generate", "ForgeModMetadata")
+    val taskName = getTaskName("generate", baseTaskName)
     val task = tasks.register(taskName, GenerateForgeModMetadata::class.java) {
         group = "fabric"
         description = "Generates mods.toml files for $sourceSetName fabric mod."
@@ -37,7 +38,7 @@ extensions.getByType<SourceSetContainer>().configureEach {
     }
     resources.srcDir(task)
 
-    val cleanTask = tasks.register(getTaskName("clean", "ForgeModMetadata"), Delete::class.java) {
+    val cleanTask = tasks.register(getTaskName("clean", baseTaskName), Delete::class.java) {
         group = "fabric"
         delete(file("src/generated/$sourceSetName/resources"))
     }
