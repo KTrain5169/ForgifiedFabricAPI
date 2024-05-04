@@ -35,7 +35,7 @@ val compareJar by tasks.registering(Jar::class) {
 }
 
 val remapReferenceApi by tasks.creating(RemapJarTask::class) {
-    group = "fabric"
+    group = "sinytra"
     outputs.cacheIf { true }
     inputFile.fileProvider(provider {
         val deps = referenceApi.resolvedConfiguration

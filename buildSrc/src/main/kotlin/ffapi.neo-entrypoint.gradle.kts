@@ -6,8 +6,6 @@ import kotlin.io.path.writeText
 val versionMc: String by rootProject
 val versionForge: String by rootProject
 
-// TODO use org/sinytra everywhere + migrate loader
-
 val loom = extensions.getByType<LoomGradleExtensionAPI>()
 val sourceSets = extensions.getByType<SourceSetContainer>()
 
@@ -19,7 +17,7 @@ masterSourceSets.forEach { sourceSet ->
     val taskName = sourceSet.getTaskName("generate", baseTaskName)
     val targetDir = project.file("src/generated/${sourceSet.name}/java")
     val task = tasks.register(taskName, GenerateForgeModEntrypoint::class.java) {
-        group = "fabric"
+        group = "sinytra"
         description = "Generates entrypoint files for ${sourceSet.name} fabric mod."
         project.tasks.findByName(sourceSet.getTaskName("generate", "ImplPackageInfos"))?.let { mustRunAfter(it) }
 
@@ -31,7 +29,7 @@ masterSourceSets.forEach { sourceSet ->
     }
     sourceSet.java.srcDir(task)
     val cleanTask = tasks.register(sourceSet.getTaskName("clean", baseTaskName), Delete::class.java) {
-        group = "fabric"
+        group = "sinytra"
         delete(file("src/generated/${sourceSet.name}/java"))
         project.tasks.findByName(sourceSet.getTaskName("clean", "ImplPackageInfos"))?.let { mustRunAfter(it) }
     }
@@ -54,7 +52,6 @@ abstract class GenerateForgeModEntrypoint : DefaultTask() {
     @get:OutputDirectory
     val outputDir: DirectoryProperty = project.objects.directoryProperty()
 
-    private val basePackageName = "org.sinytra.fabric.generated."
     private val projectNamePattern = "^fabric_(.+?)(?:_v\\d)?\$".toRegex()
 
     @TaskAction
@@ -63,8 +60,7 @@ abstract class GenerateForgeModEntrypoint : DefaultTask() {
         val modid = normalizeModid(modMetadata.id)
 
         val className = "GeneratedEntryPoint"
-        val packageName = basePackageName + (projectNamePattern.find(modid)?.groups?.get(1)?.value
-            ?: throw RuntimeException("Unable to determine generated package name for mod $modid"))
+        val packageName = packageNameForEntryPoint(modid)
         val packagePath = packageName.replace('/', '.')
         val packageDir = outputDir.file(packagePath).get().asFile.toPath()
         packageDir.createDirectories()
@@ -119,6 +115,12 @@ abstract class GenerateForgeModEntrypoint : DefaultTask() {
         """.trimIndent()
 
         destFile.writeText(template)
+    }
+
+    private fun packageNameForEntryPoint(modid: String): String {
+        val uniqueName = projectNamePattern.find(modid)?.groups?.get(1)?.value
+            ?: throw RuntimeException("Unable to determine generated package name for mod $modid")
+        return "org.sinytra.fabric.$uniqueName.generated"
     }
 
     private fun entryPointExists(path: String): Boolean {

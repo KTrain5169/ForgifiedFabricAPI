@@ -100,7 +100,7 @@ dependencies {
 
 tasks {
     register("generate") {
-        group = "fabric"
+        group = "sinytra"
     }
 
     withType<JavaCompile> {

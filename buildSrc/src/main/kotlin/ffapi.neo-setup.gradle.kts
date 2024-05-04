@@ -13,23 +13,6 @@ val sourceSets = extensions.getByType<SourceSetContainer>()
 
 val jar = tasks.named<Jar>("jar")
 val remapJar = tasks.named<RemapJarTask>("remapJar")
-val localDevJar = tasks.register("localDevJar", Jar::class.java) {
-    dependsOn(jar)
-    from(zipTree(jar.flatMap { it.archiveFile }))
-    rename("accesstransformer_dev.cfg", "accesstransformer.cfg")
-    archiveClassifier = "local"
-    destinationDirectory = project.layout.buildDirectory.dir("devlibs")
-    manifest.from(jar.get().manifest)
-}
-
-afterEvaluate {
-    configurations.named("namedElements") {
-        outgoing.artifacts.clear()
-        outgoing.artifact(localDevJar) {
-            builtBy(localDevJar)
-        }
-    }
-}
 
 remapJar {
     doLast {
@@ -79,7 +62,11 @@ val testmod: SourceSet by sourceSets.creating {
 }
 
 dependencies {
+    // TODO Update gradle module metadata in FFLoader to avoid this
     "compileOnly"("org.sinytra:fabric-loader:$versionForgifiedFabricLoader")
+    "runtimeOnly"("org.sinytra:fabric-loader:$versionForgifiedFabricLoader:full") {
+        isTransitive = false
+    }
 
     "testmodImplementation"(mainSourceSet.output)
     "testmodCompileOnly"("org.sinytra:fabric-loader:$versionForgifiedFabricLoader")

@@ -15,7 +15,7 @@ sourceSets.configureEach {
         val sourceSetName = name
         val taskName = getTaskName("generate", "ImplPackageInfos")
         val task = project.tasks.register<GenerateImplPackageInfos>(taskName) {
-            group = "fabric"
+            group = "sinytra"
             description = "Generates package-info files for $sourceSetName implementation packages."
             // Only apply to default source directory since we also add the generated 
             // sources to the source set.
@@ -25,7 +25,7 @@ sourceSets.configureEach {
         }
         java.srcDir(task)
         val cleanTask = project.tasks.register<Delete>(getTaskName("clean", "ImplPackageInfos")) {
-            group = "fabric"
+            group = "sinytra"
             delete(file("src/generated/$sourceSetName/java"))
         }
         tasks.named("clean") {

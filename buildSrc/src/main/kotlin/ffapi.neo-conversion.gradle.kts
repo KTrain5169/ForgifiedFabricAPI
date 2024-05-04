@@ -24,7 +24,7 @@ extensions.getByType<SourceSetContainer>().configureEach {
     val resourceRoots = resources.srcDirs
     val taskName = getTaskName("generate", baseTaskName)
     val task = tasks.register(taskName, GenerateForgeModMetadata::class.java) {
-        group = "fabric"
+        group = "sinytra"
         description = "Generates mods.toml files for $sourceSetName fabric mod."
 
         // Only apply to default source directory since we also add the generated
@@ -39,7 +39,7 @@ extensions.getByType<SourceSetContainer>().configureEach {
     resources.srcDir(task)
 
     val cleanTask = tasks.register(getTaskName("clean", baseTaskName), Delete::class.java) {
-        group = "fabric"
+        group = "sinytra"
         delete(file("src/generated/$sourceSetName/resources"))
     }
     tasks.named("clean") {
