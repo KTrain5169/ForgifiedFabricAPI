@@ -5,7 +5,7 @@ import net.fabricmc.loom.task.RemapJarTask
 import java.io.FileOutputStream
 
 val versionMc: String by rootProject
-val versionUpstreamFabricApi: String by project
+val upstreamVersion: String by rootProject.ext
 val versionFabricLoader: String by rootProject
 val versionJCC: String by rootProject
 
@@ -22,8 +22,8 @@ val jarCompatChecker: Configuration by configurations.creating
 dependencies {
     baseLib("net.fabricmc:fabric-loader:$versionFabricLoader")
 
-    referenceApi("net.fabricmc.fabric-api:fabric-api:$versionUpstreamFabricApi+$versionMc")
-    referenceApi("net.fabricmc.fabric-api:fabric-api-deprecated:$versionUpstreamFabricApi+$versionMc")
+    referenceApi("net.fabricmc.fabric-api:fabric-api:$upstreamVersion+$versionMc")
+    referenceApi("net.fabricmc.fabric-api:fabric-api-deprecated:$upstreamVersion+$versionMc")
 
     jarCompatChecker("dev.su5ed.sinytra:jarcompatibilitychecker:$versionJCC:all")
 }

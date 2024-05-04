@@ -38,11 +38,18 @@ ext["moduleDependencies"] = object : groovy.lang.Closure<Unit>(this) {
         moduleDependencies(project, depNames)
     }
 }
+ext["testDependencies"] = object : groovy.lang.Closure<Unit>(this) {
+    fun doCall(project: Project, depNames: List<String>) {
+        testDependencies(project, depNames)
+    }
+}
 
 val upstreamProperties = Properties().also { p ->
     file("$upstreamProjectPath/gradle.properties").takeIf(File::exists)?.bufferedReader()?.use { p.load(it) }
 }
 val upstreamVersion = upstreamProperties["version"] ?: "0.0.0"
+
+ext["upstreamVersion"] = upstreamVersion
 
 val javadocDeps: Configuration by configurations.creating
 val yarnMappings: Configuration by configurations.creating
@@ -247,4 +254,14 @@ fun moduleDependencies(project: Project, depNames: List<String>) {
             }
         }
     }
+}
+
+fun testDependencies(project: Project, depNames: List<String>) {
+	val deps = depNames.map { project.dependencies.project(":$it", "namedElements") }
+
+	project.dependencies {
+		deps.forEach {
+			"testmodImplementation"(it)
+		}
+	}
 }
