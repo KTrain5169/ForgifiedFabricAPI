@@ -1,8 +1,4 @@
-import net.fabricmc.loader.impl.metadata.DependencyOverrides
-import net.fabricmc.loader.impl.metadata.EntrypointMetadata
-import net.fabricmc.loader.impl.metadata.LoaderModMetadata
-import net.fabricmc.loader.impl.metadata.ModMetadataParser
-import net.fabricmc.loader.impl.metadata.VersionOverrides
+import net.fabricmc.loader.impl.metadata.*
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
@@ -19,7 +15,8 @@ val sourceSets = extensions.getByType<SourceSetContainer>()
 val masterSourceSets = listOf("main", "testmod").mapNotNull(sourceSets::findByName)
 
 masterSourceSets.forEach { sourceSet ->
-    val taskName = sourceSet.getTaskName("generate", "ForgeModEntrypoint")
+    val baseTaskName = "ForgeModEntrypoint"
+    val taskName = sourceSet.getTaskName("generate", baseTaskName)
     val targetDir = project.file("src/generated/${sourceSet.name}/java")
     val task = tasks.register(taskName, GenerateForgeModEntrypoint::class.java) {
         group = "fabric"
@@ -33,6 +30,14 @@ masterSourceSets.forEach { sourceSet ->
         fabricModJson.set(file("src/${sourceSet.name}/resources/fabric.mod.json"))
     }
     sourceSet.java.srcDir(task)
+    val cleanTask = tasks.register(sourceSet.getTaskName("clean", baseTaskName), Delete::class.java) {
+        group = "fabric"
+        delete(file("src/generated/${sourceSet.name}/java"))
+        project.tasks.findByName(sourceSet.getTaskName("clean", "ImplPackageInfos"))?.let { mustRunAfter(it) }
+    }
+    tasks.named("clean") {
+        dependsOn(cleanTask)
+    }
     rootProject.tasks.named("generate") {
         dependsOn(task)
     }
