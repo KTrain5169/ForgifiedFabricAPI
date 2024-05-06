@@ -45,7 +45,7 @@ extensions.getByType<SourceSetContainer>().configureEach {
     tasks.named("clean") {
         dependsOn(cleanTask)
     }
-    rootProject.tasks.named("generate") {
+    tasks.named("generate") {
         dependsOn(task)
     }
 }

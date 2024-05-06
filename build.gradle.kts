@@ -106,10 +106,6 @@ dependencies {
 }
 
 tasks {
-    register("generate") {
-        group = "sinytra"
-    }
-
     withType<JavaCompile> {
         options.release = 21
     }
@@ -121,6 +117,10 @@ val includedRemappedJars: Configuration by configurations.creating
 val includedTestModRemappedJars: Configuration by configurations.creating
 
 subprojects {
+    tasks.register("generate") {
+        group = "sinytra"
+    }
+
     // Setup must come before generators
     apply(plugin = "ffapi.neo-setup")
     apply(plugin = "ffapi.neo-conversion")

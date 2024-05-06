@@ -36,7 +36,7 @@ masterSourceSets.forEach { sourceSet ->
     tasks.named("clean") {
         dependsOn(cleanTask)
     }
-    rootProject.tasks.named("generate") {
+    tasks.named("generate") {
         dependsOn(task)
     }
 }
