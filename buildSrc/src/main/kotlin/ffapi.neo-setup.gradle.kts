@@ -7,6 +7,7 @@ import kotlin.io.path.deleteIfExists
 val versionMc: String by rootProject
 val versionForge: String by rootProject
 val versionForgifiedFabricLoader: String by rootProject
+val versionFabricLoader: String by rootProject
 
 val loom = extensions.getByType<LoomGradleExtensionAPI>()
 val sourceSets = extensions.getByType<SourceSetContainer>()
@@ -73,6 +74,13 @@ dependencies {
     "testmodRuntimeOnly"("org.sinytra:fabric-loader:$versionForgifiedFabricLoader:full") {
         isTransitive = false
     }
+
+    "testImplementation"(testmod.output)
+    "testImplementation"("org.mockito:mockito-core:5.4.0")
+}
+
+tasks.named<Test>("test") {
+    useJUnitPlatform()
 }
 
 loom.apply {

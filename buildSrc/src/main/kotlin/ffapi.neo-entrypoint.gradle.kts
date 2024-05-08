@@ -26,6 +26,7 @@ masterSourceSets.forEach { sourceSet ->
         sourceRoots.from(sourceSet.java.srcDirs)
         outputDir.set(targetDir)
         fabricModJson.set(file("src/${sourceSet.name}/resources/fabric.mod.json"))
+        testEnvironment = sourceSet.name == "testmod"
     }
     sourceSet.java.srcDir(task)
     val cleanTask = tasks.register(sourceSet.getTaskName("clean", baseTaskName), Delete::class.java) {
@@ -48,6 +49,9 @@ abstract class GenerateForgeModEntrypoint : DefaultTask() {
 
     @get:InputFile
     val fabricModJson: RegularFileProperty = project.objects.fileProperty()
+
+    @get:Input
+    val testEnvironment: Property<Boolean> = project.objects.property(Boolean::class)
 
     @get:OutputDirectory
     val outputDir: DirectoryProperty = project.objects.directoryProperty()
@@ -99,6 +103,10 @@ abstract class GenerateForgeModEntrypoint : DefaultTask() {
         val entrypointInitializers = listOf(commonEntrypointInit, clientEntrypointInit, serverEntrypointInit)
             .filter(String::isNotEmpty)
             .joinToString(separator = separator)
+        val testEnvSetup = if (testEnvironment.get())
+            """// Setup test environment
+                    net.neoforged.neoforge.registries.GameData.unfreezeData();$separator"""
+        else ""
 
         val template = """
             package $packageName;
@@ -109,7 +117,7 @@ abstract class GenerateForgeModEntrypoint : DefaultTask() {
                 public static final String RAW_MOD_ID = "${modMetadata.id}";  
             
                 public $className() {
-                    $entrypointInitializers
+                    $testEnvSetup$entrypointInitializers
                 }
             }
         """.trimIndent()

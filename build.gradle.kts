@@ -86,6 +86,7 @@ allprojects {
             name = "Sinytra"
             url = uri("https://maven.su5ed.dev/releases")
         }
+        mavenLocal()
     }
 
     dependencies {
@@ -129,10 +130,6 @@ subprojects {
 
     if (!META_PROJECTS.contains(name)) {
         apply(plugin = "ffapi.neo-compat")
-    }
-
-    repositories {
-        maven("https://maven.su5ed.dev/releases")
     }
 
     if (name !in DEV_ONLY_MODULES && !META_PROJECTS.contains(name)) {
