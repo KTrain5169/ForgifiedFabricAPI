@@ -116,13 +116,22 @@ abstract class GenerateForgeModEntrypoint : DefaultTask() {
                 public static final String MOD_ID = "$modid";  
                 public static final String RAW_MOD_ID = "${modMetadata.id}";  
             
-                public $className() {
+                public $className(net.neoforged.bus.api.IEventBus bus) {
                     $testEnvSetup$entrypointInitializers
+                    ${addGametests(modMetadata)}
                 }
             }
         """.trimIndent()
 
         destFile.writeText(template)
+    }
+
+    private fun addGametests(modMetadata: LoaderModMetadata): String {
+        val entrypoints = modMetadata.getEntrypoints("fabric-gametest").map(EntrypointMetadata::getValue).takeIf { it.isNotEmpty() } ?: return ""
+        val lines = entrypoints.joinToString(separator = "\n                        ") { "event.register(cpw.mods.modlauncher.api.LambdaExceptionUtils.uncheck(() -> Class.forName(\"$it\")));" }
+        return """bus.addListener(net.neoforged.neoforge.event.RegisterGameTestsEvent.class, event -> {
+                        $lines
+                    });"""
     }
 
     private fun packageNameForEntryPoint(modid: String): String {

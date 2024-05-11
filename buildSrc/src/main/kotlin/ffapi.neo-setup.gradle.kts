@@ -103,7 +103,7 @@ loom.apply {
             source(testmod)
 
             // Enable the gametest runner
-            property("forge.gameTestServer", "true")
+            property("neoforge.gameTestServer", "true")
         }
 
         create("testmodClient") {

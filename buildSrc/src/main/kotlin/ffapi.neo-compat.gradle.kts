@@ -25,7 +25,7 @@ dependencies {
     referenceApi("net.fabricmc.fabric-api:fabric-api:$upstreamVersion+$versionMc")
     referenceApi("net.fabricmc.fabric-api:fabric-api-deprecated:$upstreamVersion+$versionMc")
 
-    jarCompatChecker("dev.su5ed.sinytra:jarcompatibilitychecker:$versionJCC:all")
+    jarCompatChecker("net.neoforged:jarcompatibilitychecker:$versionJCC:all")
 }
 
 val compareJar by tasks.registering(Jar::class) {
