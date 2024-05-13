@@ -157,6 +157,10 @@ subprojects {
         }
     }
 
+    tasks.named<Jar>("sourcesJar") {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+
     publishing {
         publications {
             register<MavenPublication>("mavenJava") {
@@ -176,14 +180,6 @@ tasks {
         forgeNestedJars.addAll(includedJarFactory.getForgeNestedJars(configurations.getByName("includedRemappedJars"))
             .map { it.left().map(LazyNestedFile::resolve) })
     }
-
-    // TODO
-//    remapTestmodJar {
-//    	mustRunAfter remapJar
-//    	forgeNestedJars.addAll includedJarFactory.getForgeNestedJars(configurations.includedTestModRemappedJars)
-//    		.map { it.left().collect { it.resolve() } }
-//    	addNestedDependencies = true
-//    }
 }
 
 afterEvaluate {
