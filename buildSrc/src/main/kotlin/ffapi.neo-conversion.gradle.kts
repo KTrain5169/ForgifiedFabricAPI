@@ -1,8 +1,12 @@
 import com.google.gson.JsonParser
 import com.moandjiezana.toml.TomlWriter
+import dev.architectury.at.AccessTransformSet
+import dev.architectury.at.io.AccessTransformFormats
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
 import net.fabricmc.loom.api.mappings.layered.MappingsNamespace
 import net.fabricmc.loom.task.service.MappingsService
+import net.fabricmc.loom.util.LfWriter
+import net.fabricmc.loom.util.aw2at.Aw2At
 import net.fabricmc.loom.util.service.BuildSharedServiceManager
 import net.fabricmc.loom.util.service.UnsafeWorkQueueHelper
 import kotlin.io.path.*
@@ -43,6 +47,14 @@ extensions.getByType<SourceSetContainer>().configureEach {
     }
     tasks.named("generate") {
         dependsOn(task)
+    }
+}
+
+afterEvaluate { 
+    if (loom.accessWidenerPath.isPresent) {
+        tasks.withType<Jar> {
+            exclude(loom.accessWidenerPath.get().asFile.name)
+        }
     }
 }
 
@@ -220,6 +232,20 @@ abstract class GenerateForgeModMetadata : DefaultTask() {
             modsTomlFile.deleteIfExists()
             modsTomlFile.parent.createDirectories()
             TomlWriter().write(modsToml, modsTomlFile.toFile())
+        }
+
+        if (accessWidener.isPresent) {
+            val awPath = accessWidener.get().asFile.toPath()
+            val atPath = output.resolve("META-INF/accesstransformer.cfg")
+        
+            var at = AccessTransformSet.create()
+            awPath.bufferedReader().use { at.merge(Aw2At.toAccessTransformSet(it)) }
+        
+            val service = UnsafeWorkQueueHelper.get(mappingServiceUuid, MappingsService::class.java)
+        
+            at = at.remap(service.memoryMappingTree, service.fromNamespace, service.toNamespace)
+        
+            LfWriter(atPath.bufferedWriter()).use {  AccessTransformFormats.FML.write(it, at) }
         }
     }
 }

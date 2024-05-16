@@ -1,4 +1,7 @@
 
+import net.fabricmc.loom.build.nesting.IncludedJarFactory
+import net.fabricmc.loom.build.nesting.JarNester
+import net.fabricmc.loom.util.Constants
 import net.fabricmc.loom.util.GroovyXmlUtil
 import org.apache.commons.codec.digest.DigestUtils
 import java.util.*
@@ -165,9 +168,30 @@ subprojects {
                 pom {
 //                    addPomMetadataInformation(project, pom) TODO
                 }
-                tasks.named("remapJar").let { artifact(it) { builtBy(it) } }
-                tasks.named("remapSourcesJar").let { artifact(it) { builtBy(it) } }
             }
+        }
+    }
+}
+
+allprojects { 
+    tasks.named<Jar>("jar") {
+        doLast {
+            val factory = IncludedJarFactory(project)
+            val nestedJars = factory.getNestedJars(configurations.getByName(Constants.Configurations.INCLUDE))
+    
+            if (!nestedJars.isPresent) {
+                logger.info("No jars to nest")
+                return@doLast
+            }
+    
+            val jars: MutableSet<File> = LinkedHashSet(nestedJars.get().files)
+            JarNester.nestJars(
+                jars,
+                emptyList(),
+                archiveFile.get().asFile,
+                loom.platform.get(),
+                project.logger
+            )
         }
     }
 }

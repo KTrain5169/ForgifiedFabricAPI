@@ -1,8 +1,8 @@
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
+import net.fabricmc.loom.build.nesting.IncludedJarFactory
+import net.fabricmc.loom.build.nesting.JarNester
 import net.fabricmc.loom.task.AbstractRemapJarTask
 import net.fabricmc.loom.task.RemapJarTask
-import net.fabricmc.loom.util.FileSystemUtil
-import kotlin.io.path.deleteIfExists
 
 val versionMc: String by rootProject
 val versionForge: String by rootProject
@@ -13,16 +13,7 @@ val loom = extensions.getByType<LoomGradleExtensionAPI>()
 val sourceSets = extensions.getByType<SourceSetContainer>()
 
 val jar = tasks.named<Jar>("jar")
-val remapJar = tasks.named<RemapJarTask>("remapJar")
-
-remapJar {
-    doLast {
-        FileSystemUtil.getJarFileSystem(archiveFile.get().asFile.toPath(), false).use {
-            val atPath = it.get().getPath("META-INF/accesstransformer_dev.cfg")
-            atPath.deleteIfExists()
-        }
-    }
-}
+//val remapJar = tasks.named<RemapJarTask>("remapJar")
 
 tasks.withType<AbstractRemapJarTask>().configureEach {
     remapperIsolation = false
@@ -73,32 +64,6 @@ dependencies {
 tasks.named<Test>("test") {
     useJUnitPlatform()
     enabled = false
-}
-
-// Setup AW -> AT conversion
-afterEvaluate {
-    if (loom.accessWidenerPath.isPresent) {
-        // Find the relative AW file name
-        var awName: String? = null
-        val awPath = loom.accessWidenerPath.get().asFile.toPath()
-        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-        val main = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME)
-
-        for (srcDir in main.resources.srcDirs) {
-            val srcDirPath = srcDir.toPath().toAbsolutePath()
-
-            if (awPath.startsWith(srcDirPath)) {
-                awName = srcDirPath.relativize(awPath).toString().replace(File.separator, "/")
-                break
-            }
-        }
-
-        if (awName == null) {
-            awName = awPath.fileName.toString()
-        }
-
-        remapJar.get().atAccessWideners.add(awName)
-    }
 }
 
 loom.apply {
