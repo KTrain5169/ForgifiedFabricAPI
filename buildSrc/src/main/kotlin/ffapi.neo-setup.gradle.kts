@@ -28,17 +28,6 @@ tasks.withType<AbstractRemapJarTask>().configureEach {
     remapperIsolation = false
 }
 
-//configurations.named("remappedJars") {
-//    isCanBeConsumed = true
-//    isCanBeResolved = false
-//}
-//configurations.named("testModRemappedJars") {
-//    isCanBeConsumed = true
-//    isCanBeResolved = false
-//}
-
-//artifacts.add("remappedJars", remapJar)
-
 val mainSourceSet = sourceSets.getByName("main")
 
 mainSourceSet.apply {
@@ -86,6 +75,32 @@ tasks.named<Test>("test") {
     enabled = false
 }
 
+// Setup AW -> AT conversion
+afterEvaluate {
+    if (loom.accessWidenerPath.isPresent) {
+        // Find the relative AW file name
+        var awName: String? = null
+        val awPath = loom.accessWidenerPath.get().asFile.toPath()
+        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+        val main = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME)
+
+        for (srcDir in main.resources.srcDirs) {
+            val srcDirPath = srcDir.toPath().toAbsolutePath()
+
+            if (awPath.startsWith(srcDirPath)) {
+                awName = srcDirPath.relativize(awPath).toString().replace(File.separator, "/")
+                break
+            }
+        }
+
+        if (awName == null) {
+            awName = awPath.fileName.toString()
+        }
+
+        remapJar.get().atAccessWideners.add(awName)
+    }
+}
+
 loom.apply {
     mixin {
         useLegacyMixinAp = true
@@ -97,6 +112,8 @@ loom.apply {
     runs {
         configureEach {
             property("mixin.debug", "true")
+            // FIXME Set this from fabric-api-base as ResourcePackProfileMixin fails otherwise
+            property("mixin.initialiserInjectionMode", "safe")
         }
 
         create("gametest") {

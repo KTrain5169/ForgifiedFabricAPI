@@ -1,5 +1,4 @@
-import net.fabricmc.loom.build.nesting.IncludedJarFactory
-import net.fabricmc.loom.build.nesting.IncludedJarFactory.LazyNestedFile
+
 import net.fabricmc.loom.util.GroovyXmlUtil
 import org.apache.commons.codec.digest.DigestUtils
 import java.util.*
@@ -92,10 +91,9 @@ allprojects {
     dependencies {
         minecraft(group = "com.mojang", name = "minecraft", version = versionMc)
         neoForge(group = "net.neoforged", name = "neoforge", version = versionForge)
-        mappings(loom.layered {
-            mappings("net.fabricmc:yarn:$versionYarn:v2")
-            mappings("dev.architectury:yarn-mappings-patch-neoforge:1.20.5+build.3")
-        })
+        mappings(loom.layered { officialMojangMappings {
+            nameSyntheticMembers = true
+        }})
     }
 }
 
@@ -171,14 +169,6 @@ subprojects {
                 tasks.named("remapSourcesJar").let { artifact(it) { builtBy(it) } }
             }
         }
-    }
-}
-
-val includedJarFactory = IncludedJarFactory(project)
-tasks {
-    remapJar {
-        forgeNestedJars.addAll(includedJarFactory.getForgeNestedJars(configurations.getByName("includedRemappedJars"))
-            .map { it.left().map(LazyNestedFile::resolve) })
     }
 }
 

@@ -17,39 +17,39 @@
 package net.fabricmc.fabric.mixin.command.client;
 
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.client.ClientCommandSourceStack;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(ClientCommandSourceStack.class)
 abstract class ClientCommandSourceStackMixin implements FabricClientCommandSource {
 	@Override
-	public void sendFeedback(Text message) {
-		getClient().inGameHud.getChatHud().addMessage(message);
-		getClient().getNarratorManager().narrate(message);
+	public void sendFeedback(Component message) {
+		getClient().gui.getChat().addMessage(message);
+		getClient().getNarrator().sayNow(message);
 	}
 
 	@Override
-	public void sendError(Text message) {
-		sendFeedback(Text.literal("").append(message).formatted(Formatting.RED));
+	public void sendError(Component message) {
+		sendFeedback(Component.literal("").append(message).withStyle(ChatFormatting.RED));
 	}
 
 	@Override
-	public MinecraftClient getClient() {
-		return MinecraftClient.getInstance();
+	public Minecraft getClient() {
+		return Minecraft.getInstance();
 	}
 
 	@Override
-	public ClientPlayerEntity getPlayer() {
+	public LocalPlayer getPlayer() {
 		return getClient().player;
 	}
 
 	@Override
-	public ClientWorld getWorld() {
-		return getClient().world;
+	public ClientLevel getWorld() {
+		return getClient().level;
 	}
 }

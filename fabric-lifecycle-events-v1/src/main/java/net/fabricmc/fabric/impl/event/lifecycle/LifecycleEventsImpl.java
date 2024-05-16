@@ -18,11 +18,11 @@ package net.fabricmc.fabric.impl.event.lifecycle;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.*;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.TagsUpdatedEvent;
@@ -58,13 +58,13 @@ public final class LifecycleEventsImpl implements ModInitializer {
 
         // We use the world unload event so worlds that are dynamically hot(un)loaded get (block) entity unload events fired when shut down.
         ServerWorldEvents.UNLOAD.register((server, world) -> {
-            for (WorldChunk chunk : ((LoadedChunksCache) world).fabric_getLoadedChunks()) {
+            for (LevelChunk chunk : ((LoadedChunksCache) world).fabric_getLoadedChunks()) {
                 for (BlockEntity blockEntity : chunk.getBlockEntities().values()) {
                     ServerBlockEntityEvents.BLOCK_ENTITY_UNLOAD.invoker().onUnload(blockEntity, world);
                 }
             }
 
-            for (Entity entity : world.iterateEntities()) {
+            for (Entity entity : world.getAllEntities()) {
                 ServerEntityEvents.ENTITY_UNLOAD.invoker().onUnload(entity, world);
             }
         });
@@ -72,12 +72,12 @@ public final class LifecycleEventsImpl implements ModInitializer {
         // Sinytra impl
         NeoForge.EVENT_BUS.addListener(TagsUpdatedEvent.class, ev -> CommonLifecycleEvents.TAGS_LOADED.invoker().onTagsLoaded(ev.getRegistryAccess(), ev.getUpdateCause() == TagsUpdatedEvent.UpdateCause.CLIENT_PACKET_RECEIVED));
         NeoForge.EVENT_BUS.addListener(ChunkEvent.Load.class, ev -> {
-            if (ev.getLevel() instanceof ServerWorld sw && ev.getChunk() instanceof WorldChunk wc) {
+            if (ev.getLevel() instanceof ServerLevel sw && ev.getChunk() instanceof LevelChunk wc) {
                 ServerChunkEvents.CHUNK_LOAD.invoker().onChunkLoad(sw, wc);
             }
         });
         NeoForge.EVENT_BUS.addListener(ChunkEvent.Unload.class, ev -> {
-            if (ev.getLevel() instanceof ServerWorld sw && ev.getChunk() instanceof WorldChunk wc) {
+            if (ev.getLevel() instanceof ServerLevel sw && ev.getChunk() instanceof LevelChunk wc) {
                 ServerChunkEvents.CHUNK_UNLOAD.invoker().onChunkUnload(sw, wc);
             }
         });
@@ -91,7 +91,7 @@ public final class LifecycleEventsImpl implements ModInitializer {
             if (ev.getPlayer() != null) {
                 ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.invoker().onSyncDataPackContents(ev.getPlayer(), true);
             } else {
-                for (ServerPlayerEntity player : ev.getPlayerList().getPlayerList()) {
+                for (ServerPlayer player : ev.getPlayerList().getPlayers()) {
                     ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.invoker().onSyncDataPackContents(player, false);
                 }
             }
@@ -99,17 +99,17 @@ public final class LifecycleEventsImpl implements ModInitializer {
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Pre.class, ev -> ServerTickEvents.START_SERVER_TICK.invoker().onStartTick(ev.getServer()));
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, ev -> ServerTickEvents.END_SERVER_TICK.invoker().onEndTick(ev.getServer()));
         NeoForge.EVENT_BUS.addListener(LevelTickEvent.Post.class, ev -> {
-            if (ev.getLevel() instanceof ServerWorld sw) {
+            if (ev.getLevel() instanceof ServerLevel sw) {
                 ServerTickEvents.END_WORLD_TICK.invoker().onEndTick(sw);
             }
         });
         NeoForge.EVENT_BUS.addListener(LevelEvent.Load.class, ev -> {
-            if (ev.getLevel() instanceof ServerWorld sw) {
+            if (ev.getLevel() instanceof ServerLevel sw) {
                 ServerWorldEvents.LOAD.invoker().onWorldLoad(sw.getServer(), sw);
             }
         });
         NeoForge.EVENT_BUS.addListener(LevelEvent.Unload.class, ev -> {
-            if (ev.getLevel() instanceof ServerWorld sw) {
+            if (ev.getLevel() instanceof ServerLevel sw) {
                 ServerWorldEvents.UNLOAD.invoker().onWorldUnload(sw.getServer(), sw);
             }
         });

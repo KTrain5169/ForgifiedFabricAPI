@@ -21,10 +21,10 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientBlockEntityEvents
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.impl.event.lifecycle.LoadedChunksCache;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.ChunkEvent;
@@ -50,24 +50,24 @@ public final class ClientLifecycleEventsImpl implements ClientModInitializer {
 
         // Sinytra impl
         NeoForge.EVENT_BUS.addListener(ChunkEvent.Load.class, ev -> {
-            if (ev.getLevel() instanceof ClientWorld cw && ev.getChunk() instanceof WorldChunk wc) {
+            if (ev.getLevel() instanceof ClientLevel cw && ev.getChunk() instanceof LevelChunk wc) {
                 ClientChunkEvents.CHUNK_LOAD.invoker().onChunkLoad(cw, wc);
             }
         });
         NeoForge.EVENT_BUS.addListener(ChunkEvent.Unload.class, ev -> {
-            if (ev.getLevel() instanceof ClientWorld cw && ev.getChunk() instanceof WorldChunk wc) {
+            if (ev.getLevel() instanceof ClientLevel cw && ev.getChunk() instanceof LevelChunk wc) {
                 ClientChunkEvents.CHUNK_UNLOAD.invoker().onChunkUnload(cw, wc);
             }
         });
-        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Pre.class, ev -> ClientTickEvents.START_CLIENT_TICK.invoker().onStartTick(MinecraftClient.getInstance()));
-        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, ev -> ClientTickEvents.END_CLIENT_TICK.invoker().onEndTick(MinecraftClient.getInstance()));
+        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Pre.class, ev -> ClientTickEvents.START_CLIENT_TICK.invoker().onStartTick(Minecraft.getInstance()));
+        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, ev -> ClientTickEvents.END_CLIENT_TICK.invoker().onEndTick(Minecraft.getInstance()));
         NeoForge.EVENT_BUS.addListener(LevelTickEvent.Pre.class, ev -> {
-            if (ev.getLevel() instanceof ClientWorld cw) {
+            if (ev.getLevel() instanceof ClientLevel cw) {
                 ClientTickEvents.START_WORLD_TICK.invoker().onStartTick(cw);
             }
         });
         NeoForge.EVENT_BUS.addListener(LevelTickEvent.Post.class, ev -> {
-            if (ev.getLevel() instanceof ClientWorld cw) {
+            if (ev.getLevel() instanceof ClientLevel cw) {
                 ClientTickEvents.END_WORLD_TICK.invoker().onEndTick(cw);
             }
         });

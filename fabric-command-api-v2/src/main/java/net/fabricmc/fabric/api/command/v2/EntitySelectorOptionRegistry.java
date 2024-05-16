@@ -16,12 +16,11 @@
 
 package net.fabricmc.fabric.api.command.v2;
 
-import net.minecraft.command.EntitySelectorOptions;
-import net.minecraft.command.EntitySelectorReader;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-
 import java.util.function.Predicate;
+import net.minecraft.commands.arguments.selector.EntitySelectorParser;
+import net.minecraft.commands.arguments.selector.options.EntitySelectorOptions;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Contains a function to register an entity selector option.
@@ -61,8 +60,8 @@ public final class EntitySelectorOptionRegistry {
 	 * @param handler the handler for the entity option that reads and sets the predicate
 	 * @param canUse the predicate that checks whether the option is syntactically valid
 	 */
-	public static void register(Identifier id, Text description, EntitySelectorOptions.SelectorHandler handler, Predicate<EntitySelectorReader> canUse) {
-		EntitySelectorOptions.putOption(id.toUnderscoreSeparatedString(), handler, canUse, description);
+	public static void register(ResourceLocation id, Component description, EntitySelectorOptions.Modifier handler, Predicate<EntitySelectorParser> canUse) {
+		EntitySelectorOptions.register(id.toDebugFileName(), handler, canUse, description);
 	}
 
 	/**
@@ -73,7 +72,7 @@ public final class EntitySelectorOptionRegistry {
 	 * @param description the description of the option
 	 * @param handler the handler for the entity option that reads and sets the predicate
 	 */
-	public static void registerNonRepeatable(Identifier id, Text description, EntitySelectorOptions.SelectorHandler handler) {
+	public static void registerNonRepeatable(ResourceLocation id, Component description, EntitySelectorOptions.Modifier handler) {
 		register(id, description, (reader) -> {
 			handler.handle(reader);
 			reader.setCustomFlag(id, true);
