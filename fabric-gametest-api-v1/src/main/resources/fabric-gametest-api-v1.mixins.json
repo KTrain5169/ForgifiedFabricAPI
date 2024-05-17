@@ -1,0 +1,23 @@
+{
+  "required": true,
+  "package": "net.fabricmc.fabric.mixin.gametest",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+
+
+
+    "StructureTemplateManagerMixin",
+    "TestCommandMixin",
+
+    "TestServerMixin",
+    "GameTestHooksMixin",
+    "GameTestRegistryMixin"
+  ],
+  "server": [
+
+  ],
+  "injectors": {
+    "defaultRequire": 1,
+    "maxShiftBy": 2
+  }
+}

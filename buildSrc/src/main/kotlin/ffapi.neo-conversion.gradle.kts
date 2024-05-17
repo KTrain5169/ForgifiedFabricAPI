@@ -99,7 +99,7 @@ abstract class GenerateForgeModMetadata : DefaultTask() {
         })
     }
 
-    fun normalizeModid(modid: String): String {
+    private fun normalizeModid(modid: String): String {
         return modid.replace('-', '_')
     }
 
@@ -111,7 +111,8 @@ abstract class GenerateForgeModMetadata : DefaultTask() {
 
         val mods: List<Mod>,
         val dependencies: Map<String, List<ModDependency>>,
-        val mixins: List<Mixin>?
+        val mixins: List<Mixin>?,
+        val properties: Map<String, String>?
     )
 
     data class ModDependency(
@@ -217,6 +218,11 @@ abstract class GenerateForgeModMetadata : DefaultTask() {
                     throw RuntimeException("Unknown mixin config type $it")
                 }
             }
+            val properties =
+                if (json.getAsJsonObject("entrypoints")?.has("fabric-gametest") == true) 
+                    mapOf("forgified-fabric-api:game-test-prefix" to originalModid) 
+                else 
+                    null
 
             val modsToml = ModsToml(
                 modLoader = if (containsCode) "javafml" else "lowcodefml",
@@ -226,7 +232,8 @@ abstract class GenerateForgeModMetadata : DefaultTask() {
 
                 mods,
                 dependencies = mapOf(normalModid to allDependencies),
-                mixins
+                mixins,
+                properties
             )
             val modsTomlFile = output.resolve("META-INF/neoforge.mods.toml")
             modsTomlFile.deleteIfExists()

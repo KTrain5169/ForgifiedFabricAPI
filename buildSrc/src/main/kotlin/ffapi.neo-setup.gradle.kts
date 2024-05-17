@@ -63,11 +63,6 @@ tasks.named<Test>("test") {
 }
 
 loom.apply {
-    mixin {
-        useLegacyMixinAp = true
-        defaultRefmapName = project.extensions.getByType<BasePluginExtension>().archivesName.map { "$it-refmap.json" }
-    }
-
     runtimeOnlyLog4j = true
 
     runs {
