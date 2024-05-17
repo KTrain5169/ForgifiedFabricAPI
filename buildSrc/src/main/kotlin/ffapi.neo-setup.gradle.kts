@@ -1,8 +1,5 @@
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
-import net.fabricmc.loom.build.nesting.IncludedJarFactory
-import net.fabricmc.loom.build.nesting.JarNester
 import net.fabricmc.loom.task.AbstractRemapJarTask
-import net.fabricmc.loom.task.RemapJarTask
 
 val versionMc: String by rootProject
 val versionForge: String by rootProject
@@ -13,7 +10,6 @@ val loom = extensions.getByType<LoomGradleExtensionAPI>()
 val sourceSets = extensions.getByType<SourceSetContainer>()
 
 val jar = tasks.named<Jar>("jar")
-//val remapJar = tasks.named<RemapJarTask>("remapJar")
 
 tasks.withType<AbstractRemapJarTask>().configureEach {
     remapperIsolation = false

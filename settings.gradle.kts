@@ -1,6 +1,5 @@
 pluginManagement {
     repositories {
-        mavenLocal()
         gradlePluginPortal()
         maven {
             name = "Architectury"
@@ -21,6 +20,11 @@ pluginManagement {
 }
 
 rootProject.name = "forgified-fabric-api"
+
+include("fabric-api-remap")
+project(":fabric-api-remap").projectDir = file("api-meta/fabric-api-remap")
+include("intermediary-deobf")
+project(":intermediary-deobf").projectDir = file("api-meta/intermediary-deobf")
 
 include("fabric-api-base")
 //include 'fabric-api-lookup-api-v1'

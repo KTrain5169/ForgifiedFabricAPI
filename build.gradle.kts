@@ -1,4 +1,3 @@
-
 import net.fabricmc.loom.build.nesting.IncludedJarFactory
 import net.fabricmc.loom.build.nesting.JarNester
 import net.fabricmc.loom.util.Constants
@@ -13,7 +12,7 @@ plugins {
     id("dev.architectury.loom") // Version declared in buildSrc
 }
 
-val upstreamProjectPath = "fabric-api-upstream"
+val upstreamProjectPath = "api-meta/fabric-api-upstream"
 val implementationVersion: String by project
 val versionMc: String by project
 val versionForge: String by project
@@ -21,7 +20,8 @@ val versionYarn: String by project
 val versionForgifiedFabricLoader: String by project
 val versionFabricLoader: String by project
 
-val META_PROJECTS: List<String> = listOf(
+val API_META_PROJECTS = listOf("fabric-api-remap", "intermediary-deobf")
+val META_PROJECTS: List<String> = API_META_PROJECTS + listOf(
     "deprecated",
     "fabric-api-bom",
     "fabric-api-catalog"
@@ -53,14 +53,15 @@ val upstreamVersion = upstreamProperties["version"] ?: "0.0.0"
 
 ext["upstreamVersion"] = upstreamVersion
 
-val javadocDeps: Configuration by configurations.creating
-val yarnMappings: Configuration by configurations.creating
-
 group = "org.sinytra"
 version = "$upstreamVersion+$implementationVersion+$versionMc"
 println("Version: $version")
 
 allprojects {
+    if (project.name in API_META_PROJECTS) {
+        return@allprojects
+    }
+
     apply(plugin = "java-library")
     apply(plugin = "maven-publish")
     apply(plugin = "dev.architectury.loom")
@@ -94,15 +95,36 @@ allprojects {
     dependencies {
         minecraft(group = "com.mojang", name = "minecraft", version = versionMc)
         neoForge(group = "net.neoforged", name = "neoforge", version = versionForge)
-        mappings(loom.layered { officialMojangMappings {
-            nameSyntheticMembers = true
-        }})
+        mappings(loom.layered {
+            officialMojangMappings {
+                nameSyntheticMembers = true
+            }
+        })
+    }
+
+    tasks.named<Jar>("jar") {
+        doLast {
+            val factory = IncludedJarFactory(project)
+            val nestedJars = factory.getNestedJars(configurations.getByName(Constants.Configurations.INCLUDE))
+
+            if (!nestedJars.isPresent) {
+                logger.info("No jars to nest")
+                return@doLast
+            }
+
+            val jars: MutableSet<File> = LinkedHashSet(nestedJars.get().files)
+            JarNester.nestJars(
+                jars,
+                emptyList(),
+                archiveFile.get().asFile,
+                loom.platform.get(),
+                project.logger
+            )
+        }
     }
 }
 
 dependencies {
-    javadocDeps("net.fabricmc:fabric-loader:$versionFabricLoader")
-
     // Include Forgified Fabric Loader
     include("org.sinytra:fabric-loader:$versionForgifiedFabricLoader:full")
 }
@@ -115,10 +137,13 @@ tasks {
 
 // Subprojects
 
-val includedRemappedJars: Configuration by configurations.creating
-val includedTestModRemappedJars: Configuration by configurations.creating
+allprojects {
+    if (project.name in API_META_PROJECTS) {
+        return@allprojects
+    }
+    
+    val modDependencies: Configuration by configurations.creating
 
-subprojects {
     tasks.register("generate") {
         group = "sinytra"
     }
@@ -129,20 +154,12 @@ subprojects {
     apply(plugin = "ffapi.neo-entrypoint")
     apply(plugin = "ffapi.package-info")
 
-    if (!META_PROJECTS.contains(name)) {
+    if (!META_PROJECTS.contains(name) && project != rootProject) {
         apply(plugin = "ffapi.neo-compat")
-    }
+        apply(plugin = "ffapi.neo-remap")
 
-    if (name !in DEV_ONLY_MODULES && !META_PROJECTS.contains(name)) {
-        // Include the signed or none signed jar from the sub project.
-        dependencies {
-//            includedRemappedJars(project(path, "remappedJars")) TODO
-        }
-    }
-
-    if (!META_PROJECTS.contains(name) && (file("src/testmod").exists() || file("src/testmodClient").exists())) {
-        dependencies {
-//            includedTestModRemappedJars(project(path, "testModRemappedJars")) TODO
+        configurations.register("devElements") {
+            outgoing.artifact(tasks.jar)
         }
     }
 
@@ -173,33 +190,10 @@ subprojects {
     }
 }
 
-allprojects { 
-    tasks.named<Jar>("jar") {
-        doLast {
-            val factory = IncludedJarFactory(project)
-            val nestedJars = factory.getNestedJars(configurations.getByName(Constants.Configurations.INCLUDE))
-    
-            if (!nestedJars.isPresent) {
-                logger.info("No jars to nest")
-                return@doLast
-            }
-    
-            val jars: MutableSet<File> = LinkedHashSet(nestedJars.get().files)
-            JarNester.nestJars(
-                jars,
-                emptyList(),
-                archiveFile.get().asFile,
-                loom.platform.get(),
-                project.logger
-            )
-        }
-    }
-}
-
 afterEvaluate {
     publishing {
         publications {
-            register<MavenPublication>("mavenJava") {
+            named<MavenPublication>("mavenJava") {
                 from(components["java"])
 
                 pom.withXml {
@@ -264,11 +258,11 @@ fun moduleDependencies(project: Project, depNames: List<String>) {
 }
 
 fun testDependencies(project: Project, depNames: List<String>) {
-	val deps = depNames.map { project.dependencies.project(":$it", "namedElements") }
+    val deps = depNames.map { project.dependencies.project(":$it", "namedElements") }
 
-	project.dependencies {
-		deps.forEach {
-			"testmodImplementation"(it)
-		}
-	}
+    project.dependencies {
+        deps.forEach {
+            "testmodImplementation"(it)
+        }
+    }
 }
